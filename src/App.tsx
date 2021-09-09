@@ -1,26 +1,97 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { useReducer, useState } from 'react'
+import AddUpdateBalance from './components/AddUpdateBalance/AddUpdateBalance'
+import TransactionList from './components/TransactionList/TransactionList'
+import { Entry } from './IApp'
+import './App.css'
+import { entriesReducer } from './store/reducer'
+import {
+  addTransaction,
+  removeTransaction,
+  updateCurrent,
+} from './store/actions'
 
 function App() {
+  const getInitialEntries = () => {
+    let oldItemsString = localStorage.getItem('transactions')
+    var oldItems: [] = oldItemsString ? JSON.parse(oldItemsString) : []
+
+    return oldItems
+  }
+  const [state, dispatch] = useReducer(entriesReducer, {
+    entries: getInitialEntries() || [],
+    current: '',
+  })
+
+  const [error, setError] = useState<string | null>(null)
+
+  const getBalance = () => {
+    let total = 0
+    state.entries.map((a: Entry) => {
+      total += Number(a.value)
+    })
+    return total
+  }
+
+  const handleAdd = () => {
+    setError(null)
+    if (state.current <= 0) {
+      setError(`entered amount should be greater than zero`)
+      dispatch(updateCurrent(''))
+      return
+    }
+    dispatch(addTransaction())
+  }
+
+  const handleRemove = () => {
+    setError(null)
+    if (state.current <= 0) {
+      setError(`entered amount should be greater than zero`)
+      dispatch(updateCurrent(''))
+      return
+    }
+    if (getBalance() - state.current < 0) {
+      setError(`you don't have that much balance!`)
+      return
+    }
+    dispatch(removeTransaction())
+  }
+
+  const handleUpdateCurrentValue = (e: any) => {
+    dispatch(updateCurrent(Number(e.target.value)))
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
+    <div className='App'>
+      <h1>Expense Tracker - Basic</h1>
+      <p className='warning'>
+        all old transactions are stored in localstorage click{' '}
+        <span
+          onClick={() => {
+            if (
+              window.confirm(
+                'All Old Transactions will be Cleared! Are you Sure?'
+              )
+            ) {
+              localStorage.clear()
+              window.location.reload()
+            }
+          }}
         >
-          Learn React
-        </a>
-      </header>
+          here
+        </span>{' '}
+        to clear it{' '}
+      </p>
+      <AddUpdateBalance
+        balance={getBalance()}
+        updateCurrentValue={handleUpdateCurrentValue}
+        handleAdd={handleAdd}
+        handleRemove={handleRemove}
+        currentValue={state.current}
+        error={error}
+      />
+      <TransactionList entries={state.entries} />
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
